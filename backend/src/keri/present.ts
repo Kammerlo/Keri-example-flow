@@ -10,7 +10,6 @@ export async function requestPresentation(
   verifierName: string,
   holderAid: string,
   schemaSaid: string,
-  schemaOobi: string,
   rec: StepRecorder,
   timeoutMs = 180_000
 ): Promise<{ credential: Record<string, unknown>; verification: VerificationCheck[] }> {
@@ -18,34 +17,20 @@ export async function requestPresentation(
 
   rec.add({
     title: "Verifier sends IPEX apply",
-    call: 'client.exchanges().createExchangeMessage(hab, "/ipex/apply", ...)',
+    call: "client.ipex().apply({ schemaSaid }) + submitApply(...)",
     keriMessage: "/ipex/apply",
     explanation:
       "Presentation is verifier-driven. `apply` asks the holder to present a " +
-      "credential of this schema. We build it via createExchangeMessage (not " +
-      "ipex().apply) so `oobiUrl` lands at exn.a.oobiUrl — where the Veridian " +
-      "wallet reads the schema OOBI. ipex().apply nests it under exn.a.a, which " +
-      "the wallet treats as a filter attribute and silently drops (so the phone " +
-      "would never show the request).",
+      "credential of this schema. We use the standard signify-ts ipex().apply — " +
+      "the exact call the Veridian team's credential-server uses, so the wallet " +
+      "raises a disclosure prompt on the phone.",
   });
-  const hab = await client.identifiers().get(verifierName);
-  const applyData = {
-    m: "",
-    s: schemaSaid,
-    a: {} as Record<string, unknown>,
-    oobiUrl: schemaOobi,
-  };
-  const [applyExn, applySigs] = await client
-    .exchanges()
-    .createExchangeMessage(
-      hab,
-      "/ipex/apply",
-      applyData,
-      {},
-      holderAid,
-      nowKeriTimestamp(),
-      undefined
-    );
+  const [applyExn, applySigs] = await client.ipex().apply({
+    senderName: verifierName,
+    recipient: holderAid,
+    schemaSaid,
+    datetime: nowKeriTimestamp(),
+  });
   const applyOp = await client
     .ipex()
     .submitApply(verifierName, applyExn, applySigs, [holderAid]);
