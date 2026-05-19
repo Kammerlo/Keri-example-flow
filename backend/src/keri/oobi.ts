@@ -28,14 +28,23 @@ export async function resolveOobiOnClient(
   };
 
   const connectionId = op.response?.i;
+  // Contact metadata is best-effort: the resolve above is what actually makes
+  // the AID routable. contacts().update 400s for a local identifier (and may
+  // fail for already-known contacts); that must NOT abort the connection.
   if (connectionId) {
-    await client.contacts().update(connectionId, {
-      alias: alias ?? aliasFromUrl ?? `peer-${Date.now()}`,
-      oobi: url,
-      createdAt: op.response?.dt
-        ? new Date(op.response.dt)
-        : new Date(),
-    });
+    try {
+      await client.contacts().update(connectionId, {
+        alias: alias ?? aliasFromUrl ?? `peer-${Date.now()}`,
+        oobi: url,
+        createdAt: op.response?.dt ? new Date(op.response.dt) : new Date(),
+      });
+    } catch (e) {
+      console.warn(
+        `[oobi] contacts().update skipped for ${connectionId}: ${
+          (e as Error).message
+        }`
+      );
+    }
   }
   return connectionId;
 }

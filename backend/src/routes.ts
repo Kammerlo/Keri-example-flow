@@ -165,6 +165,7 @@ export function makeRouter(
           env.issuerName,
           body.holderAid,
           SCHEMA_SAID,
+          schemaOobi,
           rec
         );
         jobs.appendSteps(jobId, rec.steps());

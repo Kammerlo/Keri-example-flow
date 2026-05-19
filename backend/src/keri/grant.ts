@@ -1,24 +1,86 @@
-import { type SignifyClient, Serder } from "signify-ts";
+import {
+  type SignifyClient,
+  type Serder,
+  Siger,
+  b,
+  d,
+  messagize,
+  serializeACDCAttachment,
+  serializeIssExnAttachment,
+} from "signify-ts";
 import { nowKeriTimestamp, waitOpts } from "./timeout";
 import { waitForNotification, markAndDelete } from "./notifications";
 import type { IssuerState } from "./issuer";
 import type { StepRecorder } from "../step";
 
 /**
- * Issue an ACDC and IPEX-grant it to the holder.
- *
- * Adopted precisely from the Veridian team's credential-server
- * (services/credential-server/src/apis/credential.api.ts): a plain
- * `client.ipex().grant()` over the issued credential's sad/iss/anc — NOT a
- * hand-built exchange message. The real Veridian wallet only surfaces a
- * notification for this standard grant shape.
+ * Build the IPEX grant exchange the way cip113 KeriService.buildGrantExchange
+ * does (KeriService.java#L721-744). The decisive part is line 739:
+ * `data = { m, s: schemaSAID, oobiUrl: schemaUrl }`. The Veridian wallet reads
+ * `exn.a.oobiUrl` to resolve the ACDC schema when the user opens the credential
+ * notification — a plain `ipex().grant()` omits it, so the wallet receives the
+ * notification but errors on open. signify-ts's built-in grant cannot inject
+ * these fields, so we assemble the exchange message ourselves.
  */
+async function buildGrantExchange(
+  client: SignifyClient,
+  args: {
+    senderName: string;
+    recipient: string;
+    datetime: string;
+    acdc: Serder;
+    iss: Serder;
+    anc: Serder;
+    ancAttachment: string | undefined;
+    schemaSaid: string;
+    schemaOobi: string;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<[any, string[], string]> {
+  const hab = await client.identifiers().get(args.senderName);
+
+  let ancAtc = args.ancAttachment;
+  if (ancAtc === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const keeper = (client as any).manager.get(hab);
+    const sigs: string[] = await keeper.sign(
+      b(args.anc.raw as unknown as string)
+    );
+    const sigers = sigs.map((sig: string) => new Siger({ qb64: sig }));
+    const ims = d(messagize(args.anc, sigers));
+    ancAtc = ims.substring(args.anc.size);
+  }
+
+  const acdcAtc = d(serializeACDCAttachment(args.iss));
+  const issAtc = d(serializeIssExnAttachment(args.anc));
+
+  const embeds = {
+    acdc: [args.acdc, acdcAtc],
+    iss: [args.iss, issAtc],
+    anc: [args.anc, ancAtc],
+  };
+
+  // KeriService.java#L736-739 — `oobiUrl` lets the wallet resolve the schema.
+  const data = { m: "", s: args.schemaSaid, oobiUrl: args.schemaOobi };
+
+  return client
+    .exchanges()
+    .createExchangeMessage(
+      hab,
+      "/ipex/grant",
+      data,
+      embeds as never,
+      args.recipient,
+      args.datetime
+    );
+}
+
 export async function issueAndGrant(
   issuer: IssuerState,
   issuerName: string,
   holderAid: string,
   schemaSaid: string,
-  _schemaOobi: string,
+  schemaOobi: string,
   attrs: { name: string; email: string; role: string },
   rec: StepRecorder
 ): Promise<{ credentialSaid: string; grantExn: unknown }> {
@@ -31,8 +93,7 @@ export async function issueAndGrant(
     keriMessage: "iss",
     explanation:
       "The issuer mints a credential into its registry. `ri` is the registry, " +
-      "`s` the schema SAID, `a` the subject attributes (the holder AID is `a.i`). " +
-      "KERIA writes an issuance (iss) event to the credential's TEL.",
+      "`s` the schema SAID, `a` the subject attributes (holder AID is `a.i`).",
     request: { ri: registrySaid, s: schemaSaid, a: { i: holderAid, ...attrs } },
   });
   const issueResult = await client.credentials().issue(issuerName, {
@@ -45,61 +106,58 @@ export async function issueAndGrant(
   rec.add({
     title: "Credential minted",
     explanation:
-      "The credential now exists with a SAID. It is not yet delivered — the " +
-      "holder must receive and admit it over IPEX.",
+      "The credential exists with a SAID. It is not delivered until the holder " +
+      "admits it over IPEX.",
     response: issueResult.acdc.ked,
   });
 
-  // Re-fetch to get sad/iss/anc + the anc CESR attachment, then grant with the
-  // built-in IPEX grant (exactly what credential-server does).
+  // anc attachment (KeriService re-fetches the credential for ancatc).
   const credential = (await client
     .credentials()
-    .get(credentialSaid)) as unknown as {
-    sad: Record<string, unknown>;
-    iss: Record<string, unknown>;
-    anc: Record<string, unknown>;
-    ancatc?: string[] | string;
-    ancAttachment?: string;
-  };
-  const ancRaw = credential.ancatc ?? credential.ancAttachment;
+    .get(credentialSaid)) as unknown as { ancatc?: string[] | string };
+  const ancRaw = credential.ancatc;
   const ancAttachment = Array.isArray(ancRaw) ? ancRaw[0] : ancRaw;
 
   rec.add({
-    title: "Issuer sends IPEX grant",
-    call: "client.ipex().grant(...) + submitGrant(...)",
+    title: "Issuer sends IPEX grant (with schema oobiUrl)",
+    call: 'client.exchanges().createExchangeMessage(hab, "/ipex/grant", ...)',
     keriMessage: "/ipex/grant",
     explanation:
-      "IPEX grant offers the credential to the holder. We use the standard " +
-      "signify-ts ipex().grant — the shape the Veridian wallet expects so it " +
-      "raises a notification on the phone.",
+      "The grant embeds acdc/iss/anc plus `s` and `oobiUrl` in exn.a. The wallet " +
+      "uses `oobiUrl` to resolve the schema when you open the credential " +
+      "notification (KeriService.java#L739). Without it the phone shows the " +
+      "notification but errors on open.",
   });
-  const [grant, gsigs, gend] = await client.ipex().grant({
+  const [grantExn, grantSigs, grantAtc] = await buildGrantExchange(client, {
     senderName: issuerName,
     recipient: holderAid,
-    acdc: new Serder(credential.sad),
-    anc: new Serder(credential.anc),
-    iss: new Serder(credential.iss),
-    ancAttachment,
     datetime: nowKeriTimestamp(),
+    acdc: issueResult.acdc,
+    iss: issueResult.iss,
+    anc: issueResult.anc,
+    ancAttachment,
+    schemaSaid,
+    schemaOobi,
   });
-  await client
+  const grantOp = await client
     .ipex()
-    .submitGrant(issuerName, grant, gsigs, gend, [holderAid]);
+    .submitGrant(issuerName, grantExn, grantSigs, grantAtc, [holderAid]);
+  await client.operations().wait(grantOp, waitOpts());
   rec.add({
     title: "Grant delivered to the holder's KERIA mailbox",
     explanation:
       "For a Veridian wallet this raises a notification on the phone; the demo " +
       "holder admits automatically in the browser.",
-    response: grant.ked,
+    response: grantExn.ked,
   });
 
-  // Block until the holder accepts (Veridian: approve on the phone now).
   rec.add({
     title: "Waiting for the holder to admit",
     keriMessage: "/ipex/admit",
     explanation:
       "submitGrant only confirms KERIA queued the message. The issuer blocks " +
-      "until the holder sends /ipex/admit back.",
+      "until the holder sends /ipex/admit back (approve on the phone in " +
+      "Veridian mode).",
   });
   const admitNote = await waitForNotification(
     client,
@@ -110,10 +168,8 @@ export async function issueAndGrant(
   rec.add({
     title: "Holder admitted the credential",
     keriMessage: "/ipex/admit",
-    explanation:
-      "The holder accepted the grant; the ACDC now lives in their wallet and " +
-      "can be presented later.",
+    explanation: "The credential now lives in the holder's wallet.",
   });
 
-  return { credentialSaid, grantExn: grant.ked };
+  return { credentialSaid, grantExn: grantExn.ked };
 }

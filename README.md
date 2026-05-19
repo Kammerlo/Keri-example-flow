@@ -47,9 +47,14 @@ talks directly to the wallet AID, so prompts appear **on the phone**. The KERI
 communication is adopted from the Veridian team's own
 [`services/credential-server`](https://github.com/cardano-foundation/veridian-wallet/tree/main/services/credential-server):
 
-- issuance: plain `client.ipex().grant({ acdc, anc, iss, ancAttachment })`
-- presentation: plain `client.ipex().apply({ schemaSaid })`
-- OOBI resolve: strip `?name=`, resolve, then `contacts().update(...)`
+- issuance & presentation: `createExchangeMessage` for `/ipex/grant` and
+  `/ipex/apply` with `s` + **`oobiUrl`** in `exn.a`
+  ([`KeriService.java#L739`](https://github.com/cardano-foundation/cip113-programmable-tokens-platform/blob/662e4fbc76756778b5e200965fa8605da71922cc/src/programmable-tokens-offchain-java/src/main/java/org/cardanofoundation/cip113/service/KeriService.java#L739)).
+  The wallet needs `oobiUrl` to resolve the ACDC schema when you **open** the
+  notification — a plain `ipex().grant()` delivers the notification but the
+  wallet errors on open.
+- OOBI resolve: strip `?name=`, resolve, then best-effort `contacts().update`
+  (a `contacts().update` failure must not abort the connection)
 - attestation: `/remotesign/ixn/req` (needs `cf-idw-keria`,
   `REMOTE_SIGNING=true`, already set)
 
