@@ -27,8 +27,7 @@ export function StepLog({ steps }: { steps: Step[] }) {
   if (ordered.length === 0)
     return (
       <p className="font-mono text-xs text-ink/40">
-        <span className="animate-blink text-accent">▍</span> steps will stream
-        here as the flow runs…
+        Steps will appear here as the flow runs.
       </p>
     );
   return (

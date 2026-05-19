@@ -16,24 +16,22 @@ const tabs = [
 function ModePill({ mode }: { mode: string }) {
   const label =
     mode === "none"
-      ? "offline"
+      ? "Not connected"
       : mode === "demo"
-        ? "demo wallet"
-        : "veridian wallet";
+        ? "Demo wallet"
+        : "Veridian wallet";
   return (
-    <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-1.5">
+    <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-1.5">
       <span
         className={cn(
           "h-2 w-2 rounded-full",
-          mode === "none"
-            ? "bg-ink/25"
-            : "bg-accent animate-pulse-ring"
+          mode === "none" ? "bg-ink/25" : "bg-accent"
         )}
       />
-      <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/40">
         mode
       </span>
-      <span className="font-display text-sm font-semibold">{label}</span>
+      <span className="text-sm font-semibold">{label}</span>
     </div>
   );
 }
@@ -42,40 +40,35 @@ export default function App() {
   const mode = useSession((s) => s.mode);
   const loc = useLocation();
   return (
-    <div className="mx-auto flex min-h-full max-w-5xl flex-col px-5 py-6">
-      {/* ── console header ─────────────────────────────────────────── */}
-      <header className="reveal panel relative overflow-hidden p-5">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rotate-12 bg-accent/10 blur-2xl" />
+    <div className="mx-auto flex min-h-full max-w-5xl flex-col px-5 py-7">
+      <header className="reveal panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-lg bg-ink text-paper shadow-[3px_3px_0_0_var(--accent)]">
-              <span className="font-display text-lg font-bold">Ki</span>
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-ink text-paper">
+              <span className="font-display text-base font-bold">Ki</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold leading-none">
-                KERI<span className="text-accent">·</span>Veridian
+              <h1 className="text-lg font-bold leading-none">
+                KERI <span className="text-ink/30">·</span> Veridian
               </h1>
-              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.25em] text-ink/45">
-                interactive credential lab
+              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40">
+                credential lab
               </p>
             </div>
           </div>
           <ModePill mode={mode} />
         </div>
-        <div className="mt-4 h-px w-full overflow-hidden bg-ink/10">
-          <div className="h-px w-1/3 animate-sweep bg-accent" />
-        </div>
-        <nav className="mt-4 flex flex-wrap gap-2">
+        <nav className="mt-5 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-4">
           {tabs.map(([to, label, n]) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "group flex items-center gap-2 rounded-lg border px-3.5 py-2 transition-all",
+                  "flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm transition-colors",
                   isActive
-                    ? "border-ink bg-ink text-paper shadow-[3px_3px_0_0_var(--accent)]"
-                    : "border-[var(--line)] bg-white text-ink/60 hover:-translate-y-0.5 hover:text-ink"
+                    ? "bg-ink text-paper"
+                    : "text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
                 )
               }
             >
@@ -89,9 +82,7 @@ export default function App() {
                   >
                     {n}
                   </span>
-                  <span className="font-display text-sm font-semibold">
-                    {label}
-                  </span>
+                  <span className="font-semibold">{label}</span>
                 </>
               )}
             </NavLink>
@@ -109,11 +100,9 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="mt-8 flex items-center justify-between border-t border-ink/10 pt-4 font-mono text-[11px] text-ink/35">
+      <footer className="mt-10 flex items-center justify-between border-t border-[var(--line)] pt-4 font-mono text-[11px] text-ink/35">
         <span>signify-ts · KERIA · ACDC · IPEX</span>
-        <span className="hidden sm:block">
-          every step is explained — read the log →
-        </span>
+        <span className="hidden sm:block">every step is explained</span>
       </footer>
     </div>
   );

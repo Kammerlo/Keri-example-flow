@@ -173,11 +173,11 @@ export default function Connect() {
         <button
           onClick={demo}
           disabled={busy || !cfg}
-          className="reveal panel group relative flex flex-col items-start p-6 text-left transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0_0_rgba(255,92,40,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="reveal panel group relative flex flex-col items-start p-6 text-left transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
           style={{ animationDelay: "120ms" }}
         >
           <div className="flex w-full items-start justify-between">
-            <div className="grid h-12 w-12 place-items-center rounded-lg bg-ink text-paper transition-transform group-hover:rotate-6">
+            <div className="grid h-12 w-12 place-items-center rounded-lg bg-ink text-paper">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.8 6.5 19.5l1-6.3L3 8.9 9 8z"
