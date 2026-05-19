@@ -1,0 +1,10 @@
+This project vendors configuration from cardano-foundation/veridian-wallet
+(https://github.com/cardano-foundation/veridian-wallet), licensed Apache-2.0.
+
+Vendored paths:
+  infra/keria-config/config.json
+  infra/keria-config/witnesses/*
+
+These are the KERIA backer-OOBI config and the keripy demo witness
+configuration, used unmodified for local-development infrastructure only.
+Re-pull with infra/update-keria-config.sh.
