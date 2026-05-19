@@ -47,10 +47,14 @@ services:
       - KERIA_BOOT_URL=http://keria:3903
       - ISSUER_NAME=keri-demo-issuer
       - ISSUER_REGISTRY=keri-demo-registry
-      # The schema OOBI embedded in IPEX grant/apply is resolved by the
-      # wallet's KERIA agent (the `keria` container) — NOT the phone. It must
-      # therefore be the docker service name, never a LAN IP / localhost.
-      - SCHEMA_OOBI_HOST=${SCHEMA_OOBI_HOST:-http://app:3001}
+      # Schema host reachable by THIS stack's KERIA (issuer bootstrap + demo
+      # holder) — keep the docker service name.
+      - SCHEMA_RESOLVE_HOST=http://app:3001
+      # Schema host reachable by the Veridian WALLET's KERIA (embedded as
+      # exn.a.oobiUrl + issuer loc-scheme). Default assumes the wallet's KERIA
+      # reaches this app at localhost:3001; override per your topology
+      # (e.g. http://host.docker.internal:3001 or http://<LAN-IP>:3001).
+      - SCHEMA_OOBI_HOST=${SCHEMA_OOBI_HOST:-http://localhost:3001}
       - PORT=3001
       - VITE_KERIA_URL=${VITE_KERIA_URL:-http://localhost:3901}
       - VITE_KERIA_BOOT_URL=${VITE_KERIA_BOOT_URL:-http://localhost:3903}

@@ -16,7 +16,8 @@ const schemaJson = JSON.parse(readFileSync(schemaPath, "utf8"));
 const SCHEMA_SAID: string = schemaJson.$id;
 
 async function bootstrapWithRetry(env: ReturnType<typeof loadEnv>) {
-  const schemaOobi = `${env.schemaOobiHost}/oobi/${SCHEMA_SAID}`;
+  // Resolved by THIS stack's KERIA at bootstrap — internal host.
+  const schemaOobi = `${env.schemaResolveHost}/oobi/${SCHEMA_SAID}`;
   for (let attempt = 1; ; attempt++) {
     try {
       return await bootstrapIssuer(env, SCHEMA_SAID, schemaOobi);

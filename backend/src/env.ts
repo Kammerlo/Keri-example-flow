@@ -5,11 +5,16 @@ export interface Env {
   issuerRegistry: string;
   issuerSalt: string | null;
   /**
-   * Schema OOBI base **from KERIA's point of view**. The schema OOBI embedded
-   * in IPEX grant/apply is resolved server-side by the wallet's KERIA agent
-   * (which, when the wallet points at this stack, is the `keria` container) —
-   * NOT by the phone. So it must be reachable on KERIA's network, e.g. the
-   * docker service name `http://app:3001`, never a LAN IP / localhost.
+   * Schema host reachable by **this stack's KERIA** (the `keria` container).
+   * Used for issuer-bootstrap schema resolve and the demo holder's
+   * /api/config — always the docker service name. Do not change for docker.
+   */
+  schemaResolveHost: string;
+  /**
+   * Schema host reachable by the **Veridian wallet's KERIA** (which may be a
+   * different KERIA on localhost / another network). Embedded as the
+   * `exn.a.oobiUrl` base in grant/apply and the issuer loc-scheme. Set this to
+   * whatever the wallet's KERIA can reach (e.g. http://localhost:3001).
    */
   schemaOobiHost: string;
   port: number;
@@ -27,7 +32,8 @@ export function loadEnv(src: NodeJS.ProcessEnv = process.env): Env {
     issuerName: src.ISSUER_NAME || "keri-demo-issuer",
     issuerRegistry: src.ISSUER_REGISTRY || "keri-demo-registry",
     issuerSalt: src.ISSUER_SALT && src.ISSUER_SALT.length > 0 ? src.ISSUER_SALT : null,
-    schemaOobiHost: src.SCHEMA_OOBI_HOST || "http://app:3001",
+    schemaResolveHost: src.SCHEMA_RESOLVE_HOST || "http://app:3001",
+    schemaOobiHost: src.SCHEMA_OOBI_HOST || "http://localhost:3001",
     port: Number(src.PORT || "3001"),
   };
 }

@@ -62,6 +62,23 @@ This message layer is verified by the headless **demo** e2e (issue → present �
 attest, 3/3) against the same KERIA. Demo mode fully demonstrates every flow
 with no phone.
 
+### Two schema hosts (important)
+
+Schema OOBIs are resolved server-side by a KERIA agent — and the demo holder
+and a real Veridian wallet may use **different** KERIAs:
+
+- **`SCHEMA_RESOLVE_HOST`** (default `http://app:3001`) — reachable by *this*
+  stack's KERIA; used for issuer bootstrap and the demo holder
+  (`/api/config`). Keep the docker service name.
+- **`SCHEMA_OOBI_HOST`** (default `http://localhost:3001`) — reachable by the
+  *Veridian wallet's* KERIA; embedded as `exn.a.oobiUrl` (base, no SAID — the
+  wallet appends `/<schemaSaid>`) and the issuer loc-scheme. Set this to
+  whatever the wallet's KERIA can reach: `http://localhost:3001`,
+  `http://host.docker.internal:3001`, or `http://<LAN-IP>:3001`.
+
+Both paths the wallet uses (inline `oobiUrl` and the indexer/loc-scheme
+lookup) then resolve to `${SCHEMA_OOBI_HOST}/oobi/<schemaSaid>`.
+
 ### Networking model (what must be reachable from where)
 
 OOBIs are resolved by **KERIA agents server-side**, not by the phone. When the
