@@ -1,0 +1,54 @@
+import { NavLink, Route, Routes, Navigate } from "react-router-dom";
+import Connect from "./routes/Connect";
+import Issue from "./routes/Issue";
+import Present from "./routes/Present";
+import Attest from "./routes/Attest";
+import { useSession } from "./state/session";
+import { cn } from "./lib/cn";
+
+const tabs = [
+  ["/connect", "1 · Connect"],
+  ["/issue", "2 · Issue"],
+  ["/present", "3 · Present"],
+  ["/attest", "4 · Attest"],
+] as const;
+
+export default function App() {
+  const mode = useSession((s) => s.mode);
+  return (
+    <div className="mx-auto max-w-5xl p-6">
+      <header className="mb-4">
+        <h1 className="text-2xl font-bold">KERI + Veridian — Educational Demo</h1>
+        <p className="text-sm text-slate-600">
+          Issue, present, and attest ACDC credentials. Every step is explained.
+          {mode !== "none" && ` · mode: ${mode}`}
+        </p>
+      </header>
+      <nav className="mb-6 flex gap-1 border-b border-slate-200">
+        {tabs.map(([to, label]) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                "px-4 py-2 text-sm",
+                isActive
+                  ? "border-b-2 border-slate-900 font-semibold"
+                  : "text-slate-500"
+              )
+            }
+          >
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+      <Routes>
+        <Route path="/" element={<Navigate to="/connect" replace />} />
+        <Route path="/connect" element={<Connect />} />
+        <Route path="/issue" element={<Issue />} />
+        <Route path="/present" element={<Present />} />
+        <Route path="/attest" element={<Attest />} />
+      </Routes>
+    </div>
+  );
+}
