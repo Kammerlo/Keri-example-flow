@@ -15,15 +15,16 @@ export default function Present() {
   const [checks, setChecks] = useState<VerificationCheck[] | null>(null);
 
   async function run() {
-    if (!s.client || !s.config) return;
+    if (!s.config || !s.holderAid) return;
     setBusy(true);
     setErr("");
     setChecks(null);
     s.clearSteps();
     try {
       // Demo holder: arm the offer listener before asking the verifier to apply.
+      // Veridian: the phone responds to the apply notification itself.
       const offerP =
-        s.mode === "demo"
+        s.mode === "demo" && s.client
           ? offerOnApply(s.client, s.walletName, s.config.schemaSaid)
           : Promise.resolve();
       s.recordClient({

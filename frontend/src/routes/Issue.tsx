@@ -17,15 +17,16 @@ export default function Issue() {
   const [done, setDone] = useState(false);
 
   async function issue() {
-    if (!s.client || !s.config) return;
+    if (!s.config || !s.holderAid) return;
     setBusy(true);
     setErr("");
     setDone(false);
     s.clearSteps();
     try {
       // Demo: start the admit listener BEFORE the backend submits the grant.
+      // Veridian: the phone admits; the backend blocks on /exn/ipex/admit.
       const admitP =
-        s.mode === "demo"
+        s.mode === "demo" && s.client
           ? admitGrantOnWallet(s.client, s.walletName, s.config.issuerAid)
           : Promise.resolve("");
       s.recordClient({

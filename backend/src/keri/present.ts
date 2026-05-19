@@ -10,6 +10,7 @@ export async function requestPresentation(
   verifierName: string,
   holderAid: string,
   schemaSaid: string,
+  schemaOobi: string,
   rec: StepRecorder,
   timeoutMs = 180_000
 ): Promise<{ credential: Record<string, unknown>; verification: VerificationCheck[] }> {
@@ -17,18 +18,34 @@ export async function requestPresentation(
 
   rec.add({
     title: "Verifier sends IPEX apply",
-    call: "client.ipex().apply({ schemaSaid })",
+    call: 'client.exchanges().createExchangeMessage(hab, "/ipex/apply", ...)',
     keriMessage: "/ipex/apply",
     explanation:
-      "Presentation is verifier-driven. `apply` asks the holder: “present a " +
-      "credential of this schema.” The holder decides whether to disclose.",
+      "Presentation is verifier-driven. `apply` asks the holder to present a " +
+      "credential of this schema. We build it via createExchangeMessage (not " +
+      "ipex().apply) so `oobiUrl` lands at exn.a.oobiUrl — where the Veridian " +
+      "wallet reads the schema OOBI. ipex().apply nests it under exn.a.a, which " +
+      "the wallet treats as a filter attribute and silently drops (so the phone " +
+      "would never show the request).",
   });
-  const [applyExn, applySigs] = await client.ipex().apply({
-    senderName: verifierName,
-    recipient: holderAid,
-    schemaSaid,
-    datetime: nowKeriTimestamp(),
-  });
+  const hab = await client.identifiers().get(verifierName);
+  const applyData = {
+    m: "",
+    s: schemaSaid,
+    a: {} as Record<string, unknown>,
+    oobiUrl: schemaOobi,
+  };
+  const [applyExn, applySigs] = await client
+    .exchanges()
+    .createExchangeMessage(
+      hab,
+      "/ipex/apply",
+      applyData,
+      {},
+      holderAid,
+      nowKeriTimestamp(),
+      undefined
+    );
   const applyOp = await client
     .ipex()
     .submitApply(verifierName, applyExn, applySigs, [holderAid]);
@@ -55,7 +72,7 @@ export async function requestPresentation(
     keriMessage: "/ipex/agree",
     explanation: "`agree` confirms the verifier wants the offered credential.",
   });
-  const [agreeExn, agreeSigs] = await client.ipex().agree({
+  const [agreeExn, agreeSigs, agreeAtc] = await client.ipex().agree({
     senderName: verifierName,
     recipient: holderAid,
     offerSaid,
@@ -88,15 +105,16 @@ export async function requestPresentation(
     response: acdc,
   });
 
-  const [admitExn, admitSigs, admitAtc] = await client.ipex().admit({
+  const [admitExn, admitSigs] = await client.ipex().admit({
     senderName: verifierName,
     recipient: holderAid,
     grantSaid,
     datetime: nowKeriTimestamp(),
   });
+  // Java reuses the agree message's attachment for the admit submit.
   const admitOp = await client
     .ipex()
-    .submitAdmit(verifierName, admitExn, admitSigs, admitAtc, [holderAid]);
+    .submitAdmit(verifierName, admitExn, admitSigs, agreeAtc, [holderAid]);
   await client.operations().wait(admitOp, waitOpts());
   await markAndDelete(client, grantNote);
 

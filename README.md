@@ -42,17 +42,27 @@ is anchored and verified against the holder's KEL.
 
 ## Veridian (real wallet) mode
 
-1. Set `PUBLIC_HOST` in `.env` to a URL your phone can reach on the LAN, e.g.
-   `http://192.168.1.50:3001` (the schema/issuer OOBIs must resolve from the
-   phone). Re-run `docker compose up -d`.
-2. **Connect** tab → "Start companion" → scan the QR with the Veridian app →
-   paste the wallet's OOBI back → "Pair wallet".
-3. Issue/Present/Attest then prompt for approval inside the Veridian app.
+This follows the canonical `cip113` `KeriService.java` model: there is **no
+browser companion** — the backend resolves the wallet's OOBI and talks directly
+to the wallet AID, so issuance/presentation/attestation prompts appear **on the
+phone**.
 
-Veridian attestation uses the `/remotesign` exchange route and requires the
-`cf-idw-keria` image with `REMOTE_SIGNING=true` (already set in compose). If a
-Veridian build does not support it, demo mode still fully demonstrates
-attestation.
+1. Set `PUBLIC_HOST` in `.env` to a URL the phone can reach on the LAN, e.g.
+   `http://192.168.1.50:3001`, and point the Veridian app's KERIA **connection
+   URL** at `…:3901` and **boot URL** at `…:3903` (LAN IP, not localhost).
+   Re-run `docker compose up -d`.
+2. **Connect** tab → Veridian card: add a connection in the Veridian app using
+   the displayed **issuer OOBI** (scan the QR or use Copy), then paste **your
+   Veridian identifier's OOBI** back into the field and press *Connect Veridian
+   & continue* (it forwards you to Issue).
+3. Issue / Present / Attest then prompt for approval inside the Veridian app.
+
+KERI communication (grant via `createExchangeMessage` with the schema OOBI in
+`exn.a`, `/ipex/apply` built the same way so the wallet doesn't drop it, and
+`/remotesign/ixn/req` for attestation) is adopted from `KeriService.java`.
+Attestation requires the `cf-idw-keria` image with `REMOTE_SIGNING=true`
+(already set in compose). Demo mode fully demonstrates every flow without a
+phone.
 
 ## Architecture
 

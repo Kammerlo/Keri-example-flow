@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useSession } from "../state/session";
 import { api } from "../lib/api";
 import { connectDemoHolder } from "../keri/holder";
-import { connectCompanion, pairVeridian } from "../keri/companion";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
@@ -11,19 +11,23 @@ import { Badge } from "../components/ui/badge";
 
 export default function Connect() {
   const s = useSession();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [companionOobi, setCompanionOobi] = useState("");
   const [veridianOobi, setVeridianOobi] = useState("");
   const [copied, setCopied] = useState(false);
 
-  async function copyCompanionOobi() {
+  useEffect(() => {
+    if (!s.config) api.config().then((c) => s.set({ config: c })).catch(() => {});
+  }, [s]);
+
+  async function copyIssuerOobi() {
+    const text = s.config?.issuerOobi ?? "";
     try {
-      await navigator.clipboard.writeText(companionOobi);
+      await navigator.clipboard.writeText(text);
     } catch {
-      // clipboard API unavailable (e.g. non-secure context) — fall back
       const ta = document.createElement("textarea");
-      ta.value = companionOobi;
+      ta.value = text;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");
@@ -32,10 +36,6 @@ export default function Connect() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
-
-  useEffect(() => {
-    if (!s.config) api.config().then((c) => s.set({ config: c })).catch(() => {});
-  }, [s]);
 
   async function demo() {
     if (!s.config) return;
@@ -57,6 +57,7 @@ export default function Connect() {
         walletName: h.walletName,
         holderAid: h.aid,
         holderOobi: h.oobi,
+        veridianAid: "",
       });
       s.recordClient({
         flow: "connect",
@@ -66,6 +67,7 @@ export default function Connect() {
           "the identifier's history is tamper-evident.",
         response: { aid: h.aid },
       });
+      navigate("/issue");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -73,30 +75,22 @@ export default function Connect() {
     }
   }
 
-  async function startVeridian() {
-    if (!s.config) return;
+  async function connectVeridian() {
+    if (!veridianOobi.trim()) return;
     setBusy(true);
     setErr("");
     try {
-      const c = await connectCompanion(s.config);
+      const resp = await api.veridianConnect(veridianOobi.trim());
+      s.addSteps(resp.steps);
       s.set({
         mode: "veridian",
-        client: c.client,
-        walletName: c.walletName,
-        holderAid: c.companionAid,
-        holderOobi: c.companionOobi,
-        veridianAid: c.veridianAid,
+        client: null,
+        walletName: "",
+        holderAid: resp.aid,
+        holderOobi: veridianOobi.trim(),
+        veridianAid: resp.aid,
       });
-      setCompanionOobi(c.companionOobi);
-      s.recordClient({
-        flow: "connect",
-        title: "Companion agent ready",
-        explanation:
-          "In Veridian mode the browser runs a companion agent. Scan its OOBI " +
-          "with the Veridian app, then paste the wallet's OOBI back to pair both " +
-          "agents' contact lists.",
-        response: { companionOobi: c.companionOobi },
-      });
+      navigate("/issue");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -104,27 +98,7 @@ export default function Connect() {
     }
   }
 
-  async function pair() {
-    if (!s.client) return;
-    setBusy(true);
-    setErr("");
-    try {
-      const aid = await pairVeridian(s.client, veridianOobi.trim());
-      s.set({ veridianAid: aid });
-      s.recordClient({
-        flow: "connect",
-        title: "Paired with Veridian wallet",
-        explanation:
-          "The companion resolved the wallet's OOBI. Both agents can now exchange " +
-          "IPEX and remote-signing messages.",
-        response: { veridianAid: aid },
-      });
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const cfg = s.config;
 
   return (
     <div className="space-y-4">
@@ -132,12 +106,6 @@ export default function Connect() {
       {s.holderAid && (
         <Alert tone="success">
           Connected ({s.mode}) — AID <Badge>{s.holderAid}</Badge>
-          {s.mode === "veridian" && s.veridianAid && (
-            <>
-              {" "}
-              · Veridian <Badge>{s.veridianAid}</Badge>
-            </>
-          )}
         </Alert>
       )}
       <div className="grid gap-4 md:grid-cols-2">
@@ -145,53 +113,81 @@ export default function Connect() {
           <h2 className="text-lg font-semibold">Demo KERI login</h2>
           <p className="mt-1 text-sm text-slate-600">
             A browser-held identity. No phone needed. Teaches client-side key
-            custody.
+            custody. You'll be taken to the Issue step.
           </p>
-          <Button className="mt-3" disabled={busy || !s.config} onClick={demo}>
+          <Button className="mt-3" disabled={busy || !cfg} onClick={demo}>
             Create demo identity
           </Button>
         </Card>
+
         <Card>
           <h2 className="text-lg font-semibold">Connect Veridian wallet</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Pair a real Veridian mobile wallet via OOBI/QR.
+            Pair a real Veridian mobile wallet. The backend talks directly to
+            your wallet, so issuance/presentation/attestation prompts appear on
+            the phone.
           </p>
-          <Button
-            className="mt-3"
-            disabled={busy || !s.config}
-            onClick={startVeridian}
-          >
-            Start companion
-          </Button>
-          {companionOobi && (
-            <div className="mt-4 space-y-2">
-              <p className="text-xs text-slate-500">
-                Scan this with the Veridian app, or copy the OOBI:
-              </p>
-              <QRCodeSVG value={companionOobi} size={160} />
-              <div className="flex items-start gap-2">
-                <code className="block flex-1 break-all rounded bg-slate-100 p-2 font-mono text-[11px] text-slate-700">
-                  {companionOobi}
-                </code>
-                <Button
-                  className="shrink-0"
-                  type="button"
-                  onClick={copyCompanionOobi}
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </Button>
+
+          <div className="mt-3 space-y-1 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <p className="font-semibold">Set up the Veridian app first:</p>
+            <p>
+              1. In Veridian → <em>Settings → Connection</em>, set the{" "}
+              <strong>KERIA connection URL</strong> to{" "}
+              <code className="rounded bg-white px-1">
+                {cfg?.keriaUrl ?? "http://localhost:3901"}
+              </code>{" "}
+              and the <strong>boot URL</strong> to{" "}
+              <code className="rounded bg-white px-1">
+                {cfg?.keriaBootUrl ?? "http://localhost:3903"}
+              </code>
+              . On a phone, replace <code>localhost</code> with this machine's
+              LAN IP (and set <code>PUBLIC_HOST</code> accordingly).
+            </p>
+            <p>
+              2. Add a connection in Veridian using this issuer's OOBI (scan or
+              copy):
+            </p>
+            {cfg?.issuerOobi ? (
+              <div className="mt-2 space-y-2">
+                <div className="bg-white p-2 inline-block rounded">
+                  <QRCodeSVG value={cfg.issuerOobi} size={140} />
+                </div>
+                <div className="flex items-start gap-2">
+                  <code className="block flex-1 break-all rounded bg-white p-2 font-mono text-[11px] text-slate-700">
+                    {cfg.issuerOobi}
+                  </code>
+                  <Button
+                    className="shrink-0"
+                    type="button"
+                    onClick={copyIssuerOobi}
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </Button>
+                </div>
               </div>
-              <textarea
-                className="w-full rounded border p-2 text-xs"
-                placeholder="Paste the Veridian wallet OOBI here"
-                value={veridianOobi}
-                onChange={(e) => setVeridianOobi(e.target.value)}
-              />
-              <Button disabled={busy || !veridianOobi} onClick={pair}>
-                Pair wallet
-              </Button>
-            </div>
-          )}
+            ) : (
+              <p className="text-amber-700">Issuer OOBI not available yet.</p>
+            )}
+            <p>
+              3. In Veridian, share <em>your</em> identifier's OOBI and paste it
+              below.
+            </p>
+          </div>
+
+          <textarea
+            className="mt-3 w-full rounded border p-2 text-xs"
+            rows={3}
+            placeholder="Paste your Veridian wallet OOBI here"
+            value={veridianOobi}
+            onChange={(e) => setVeridianOobi(e.target.value)}
+          />
+          <Button
+            className="mt-2"
+            disabled={busy || !cfg || !veridianOobi.trim()}
+            onClick={connectVeridian}
+          >
+            {busy ? "Connecting…" : "Connect Veridian & continue"}
+          </Button>
         </Card>
       </div>
     </div>

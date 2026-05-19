@@ -104,3 +104,14 @@ export interface AttestVerifyResponse {
   verification: VerificationCheck[];
   steps: StepLog[];
 }
+
+export interface VeridianConnectResponse {
+  aid: string;
+  steps: StepLog[];
+}
+export interface AttestVeridianResponse {
+  said: string;
+  seq: string;
+  verification: VerificationCheck[];
+  steps: StepLog[];
+}

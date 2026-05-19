@@ -6,6 +6,8 @@ import type {
   PresentStatusResponse,
   AttestRequestResponse,
   AttestVerifyResponse,
+  VeridianConnectResponse,
+  AttestVeridianResponse,
 } from "@keri-demo/shared";
 
 const base = import.meta.env.VITE_API_BASE || "";
@@ -36,4 +38,8 @@ export const api = {
     post<AttestRequestResponse>("/api/verifier/attest/request", b),
   attestVerify: (b: { holderAid: string; said: string; seq: string }) =>
     post<AttestVerifyResponse>("/api/verifier/attest/verify", b),
+  veridianConnect: (oobi: string) =>
+    post<VeridianConnectResponse>("/api/veridian/connect", { oobi }),
+  attestVeridian: (b: { holderAid: string; holderOobi: string }) =>
+    post<AttestVeridianResponse>("/api/verifier/attest/veridian", b),
 };

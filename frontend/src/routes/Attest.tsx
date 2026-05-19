@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSession } from "../state/session";
 import { api } from "../lib/api";
-import { demoAnchor, veridianAnchor } from "../keri/attest";
+import { demoAnchor } from "../keri/attest";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Alert } from "../components/ui/alert";
@@ -15,12 +15,33 @@ export default function Attest() {
   const [checks, setChecks] = useState<VerificationCheck[] | null>(null);
 
   async function run() {
-    if (!s.client || !s.config) return;
+    if (!s.config || !s.holderAid) return;
     setBusy(true);
     setErr("");
     setChecks(null);
     s.clearSteps();
     try {
+      if (s.mode === "veridian") {
+        // Backend drives /remotesign to the wallet AID (Java parity); approve
+        // on the phone.
+        s.recordClient({
+          flow: "attest",
+          title: "Approve the signing request on your Veridian phone",
+          explanation:
+            "The backend sent a /remotesign/ixn/req to your wallet. The phone " +
+            "signs and anchors the SAID in its own KEL; the backend then " +
+            "verifies it.",
+        });
+        const vr = await api.attestVeridian({
+          holderAid: s.holderAid,
+          holderOobi: s.holderOobi,
+        });
+        s.addSteps(vr.steps);
+        setChecks(vr.verification);
+        return;
+      }
+
+      if (!s.client) return;
       const reqResp = await api.attestRequest({
         holderAid: s.holderAid,
         holderOobi: s.holderOobi,
@@ -30,26 +51,18 @@ export default function Attest() {
 
       s.recordClient({
         flow: "attest",
-        title:
-          s.mode === "demo"
-            ? "Holder anchors the SAID (ixn)"
-            : "Approve signing on phone",
+        title: "Holder anchors the SAID (ixn)",
         explanation:
-          s.mode === "demo"
-            ? "The holder SAIDifies the payload and writes an interaction (ixn) " +
-              "event with the SAID as a seal — committing its key to this data."
-            : "The companion forwards the payload to Veridian for remote signing.",
+          "The holder SAIDifies the payload and writes an interaction (ixn) " +
+          "event with the SAID as a seal — committing its key to this data.",
       });
 
-      const { said, seq } =
-        s.mode === "demo"
-          ? await demoAnchor(s.client, s.walletName, s.holderAid, payload)
-          : await veridianAnchor(
-              s.client,
-              s.walletName,
-              s.veridianAid,
-              payload
-            );
+      const { said, seq } = await demoAnchor(
+        s.client,
+        s.walletName,
+        s.holderAid,
+        payload
+      );
       s.recordClient({
         flow: "attest",
         title: "Anchored",
@@ -58,7 +71,7 @@ export default function Attest() {
       });
 
       const vr = await api.attestVerify({
-        holderAid: s.mode === "demo" ? s.holderAid : s.veridianAid,
+        holderAid: s.holderAid,
         said,
         seq,
       });

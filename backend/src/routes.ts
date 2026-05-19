@@ -16,7 +16,11 @@ import { serialize } from "./keri/client";
 import { resolveOobiOnClient } from "./keri/oobi";
 import { issueAndGrant } from "./keri/grant";
 import { requestPresentation } from "./keri/present";
-import { createAttestationRequest, verifyAttestation } from "./keri/attest";
+import {
+  createAttestationRequest,
+  verifyAttestation,
+  remoteSignAttestation,
+} from "./keri/attest";
 import { StepRecorder } from "./step";
 import { JobRegistry } from "./jobs";
 
@@ -67,6 +71,52 @@ export function makeRouter(
     })
   );
 
+  // Veridian mode: the browser has no agent. The user pastes their Veridian
+  // wallet OOBI; the backend resolves it and from then on talks directly to the
+  // wallet AID (exactly like KeriService.resolveOobi). The phone then receives
+  // the IPEX/remotesign notifications.
+  r.post("/api/veridian/connect", async (req: Request, res: Response) => {
+    const body = req.body as { oobi: string };
+    const rec = new StepRecorder("connect");
+    try {
+      const aid = await serialize(async () => {
+        rec.add({
+          title: "Backend resolves the Veridian wallet OOBI",
+          call: "client.oobis().resolve(oobi)",
+          keriMessage: "oobi",
+          explanation:
+            "The issuer's KERIA fetches the wallet's key state from its OOBI and " +
+            "stores it as a contact. After this the backend can target the wallet " +
+            "AID directly, and the Veridian phone receives the notifications.",
+          request: { oobi: body.oobi },
+        });
+        await resolveOobiOnClient(
+          issuer.client,
+          body.oobi,
+          `veridian-${Date.now()}`
+        );
+        const m = body.oobi.match(/\/oobi\/([^/]+)/);
+        if (!m) throw new Error("No AID found in OOBI URL");
+        return m[1];
+      });
+      rec.add({
+        title: "Veridian wallet linked",
+        explanation:
+          "The wallet AID is now a known contact of the issuer. Issue, present " +
+          "and attest will prompt for approval on the phone.",
+        response: { aid },
+      });
+      res.json({ aid, steps: rec.steps() });
+    } catch (e) {
+      rec.fail(
+        (e as Error).message,
+        "Could not resolve the Veridian OOBI. Make sure the Veridian app points " +
+          "at this KERIA and the OOBI URL is reachable from the backend."
+      );
+      res.status(500).json({ steps: rec.steps(), error: (e as Error).message });
+    }
+  });
+
   r.post("/api/issuer/issue", async (req: Request, res: Response) => {
     const body = req.body as IssueRequest;
     const rec = new StepRecorder("issue");
@@ -115,6 +165,7 @@ export function makeRouter(
           env.issuerName,
           body.holderAid,
           SCHEMA_SAID,
+          schemaOobi,
           rec
         );
         jobs.appendSteps(jobId, rec.steps());
@@ -172,6 +223,49 @@ export function makeRouter(
       res.status(500).json({ steps: rec.steps(), error: (e as Error).message });
     }
   });
+
+  // Veridian attestation: backend drives remotesign to the wallet AID, then
+  // verifies the anchored SAID against the wallet's KEL (Java parity).
+  r.post(
+    "/api/verifier/attest/veridian",
+    async (req: Request, res: Response) => {
+      const body = req.body as { holderAid: string; holderOobi: string };
+      const rec = new StepRecorder("attest");
+      try {
+        const out = await serialize(async () => {
+          await resolveOobiOnClient(
+            issuer.client,
+            body.holderOobi,
+            `holder-${Date.now()}`
+          );
+          const { said, seq } = await remoteSignAttestation(
+            issuer,
+            env.issuerName,
+            body.holderAid,
+            rec
+          );
+          const verification = await verifyAttestation(
+            issuer,
+            body.holderAid,
+            said,
+            seq,
+            rec
+          );
+          return { said, seq, verification };
+        });
+        res.json({ ...out, steps: rec.steps() });
+      } catch (e) {
+        rec.fail(
+          (e as Error).message,
+          "Remote-sign attestation failed. Approve the request on the Veridian " +
+            "phone, and ensure the wallet supports the /remotesign route."
+        );
+        res
+          .status(500)
+          .json({ steps: rec.steps(), error: (e as Error).message });
+      }
+    }
+  );
 
   return r;
 }

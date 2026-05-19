@@ -9,6 +9,7 @@ import {
   serializeIssExnAttachment,
 } from "signify-ts";
 import { nowKeriTimestamp, waitOpts } from "./timeout";
+import { waitForNotification, markAndDelete } from "./notifications";
 import type { IssuerState } from "./issuer";
 import type { StepRecorder } from "../step";
 
@@ -177,8 +178,33 @@ export async function issueAndGrant(
     title: "Grant delivered to holder's KERIA mailbox",
     explanation:
       "The holder will see an `/exn/ipex/grant` notification and must `admit` it " +
-      "to store the credential. Until then the holder does not have the credential.",
+      "to store the credential. For a Veridian wallet this notification appears " +
+      "on the phone; for the demo holder the browser admits automatically.",
     response: grantExn,
+  });
+
+  // submitGrant only confirms KERIA queued the message. The holder (Veridian
+  // phone or demo browser) still has to accept and send back /ipex/admit.
+  // Mirrors KeriService.issueCredential waiting on "/exn/ipex/admit".
+  rec.add({
+    title: "Waiting for the holder to admit",
+    keriMessage: "/ipex/admit",
+    explanation:
+      "The issuer blocks until the holder accepts. In Veridian mode, approve the " +
+      "incoming credential on your phone now.",
+  });
+  const admitNote = await waitForNotification(
+    client,
+    ["/exn/ipex/admit", "/ipex/admit"],
+    180_000
+  );
+  await markAndDelete(client, admitNote);
+  rec.add({
+    title: "Holder admitted the credential",
+    keriMessage: "/ipex/admit",
+    explanation:
+      "The holder accepted the grant; the ACDC now lives in their wallet and can " +
+      "be presented later.",
   });
 
   return { credentialSaid, grantExn };
