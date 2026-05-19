@@ -43,18 +43,13 @@ export default function App() {
     <div className="mx-auto flex min-h-full max-w-5xl flex-col px-5 py-7">
       <header className="reveal panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-ink text-paper">
-              <span className="font-display text-base font-bold">Ki</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold leading-none">
-                KERI <span className="text-ink/30">·</span> Veridian
-              </h1>
-              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40">
-                credential lab
-              </p>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold leading-none">
+              KERI <span className="text-ink/30">·</span> Veridian
+            </h1>
+            <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40">
+              credential lab
+            </p>
           </div>
           <ModePill mode={mode} />
         </div>
