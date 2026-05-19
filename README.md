@@ -1,4 +1,4 @@
-# KERI · Veridian — Credential Lab
+# KERI · Veridian — Example Flow
 
 An educational TypeScript app for learning **KERI** and **ACDC** credentials. A
 backend issuer issues a credential, requests a presentation, and requests an
