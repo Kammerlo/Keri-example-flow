@@ -6,11 +6,11 @@ describe("loadEnv", () => {
     const env = loadEnv({
       KERIA_URL: "http://keria:3901",
       KERIA_BOOT_URL: "http://keria:3903",
-      PUBLIC_HOST: "http://localhost:3001",
       PORT: "3001",
     });
     expect(env.keriaUrl).toBe("http://keria:3901");
     expect(env.issuerName).toBe("keri-demo-issuer");
+    expect(env.schemaOobiHost).toBe("http://app:3001");
     expect(env.port).toBe(3001);
   });
   it("throws when KERIA_URL is missing", () => {

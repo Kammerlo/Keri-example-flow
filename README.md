@@ -62,34 +62,35 @@ This message layer is verified by the headless **demo** e2e (issue → present �
 attest, 3/3) against the same KERIA. Demo mode fully demonstrates every flow
 with no phone.
 
-### ⚠️ Known limitation: OOBI reachability for a real phone
+### Networking model (what must be reachable from where)
 
-A KERI agent can only deliver an exn to an AID whose endpoint its KERIA can
-reach, and a wallet only accepts a grant from an issuer whose OOBI it could
-resolve. **Out of the box every OOBI/URL here uses docker-internal hostnames**
-(`GET /api/config` returns e.g. `issuerOobi=http://keria:3902/...`,
-`schemaOobi=http://app:3001/...`, `keriaUrl=http://localhost:3901`). A phone
-cannot resolve `keria`, `app`, or `localhost`, so the issuer connection never
-establishes and grants are silently dropped — which is why the phone shows
-nothing even though the message construction is correct.
+OOBIs are resolved by **KERIA agents server-side**, not by the phone. When the
+Veridian app points its KERIA connection at this stack, the wallet's KERIA *is*
+the `keria` container — so every OOBI (schema, issuer, wallet) must be reachable
+**from the `keria` container's network**, i.e. the docker service names. These
+are the defaults and must **not** be changed to a LAN IP:
 
-Making a real phone work is an operator networking task, not a code change. You
-must expose, at one address the phone can reach (your machine's LAN IP, or a
-reverse proxy/tunnel), **all** of:
+- schema OOBI → `SCHEMA_OOBI_HOST=http://app:3001` (embedded as `oobiUrl` in
+  grant/apply; the wallet's KERIA fetches it)
+- issuer OOBI → `http://keria:3902/...` (what `oobis().get` returns; the
+  wallet's KERIA resolves it)
+- witnesses → `http://witnesses:564x` (vendored config; KERIA-internal)
 
-- KERIA agent `:3901` and boot `:3903` — and configure the Veridian app to use
-  them;
-- KERIA ext `:3902` **and override the advertised URL**: the vendored
-  `infra/keria-config/config.json` hardcodes `"keria": { "curls":
-  ["http://keria:3902/"] }` — change it to your reachable host so issuer OOBIs
-  are resolvable;
-- the demo witnesses `:5642–5647` — `infra/keria-config/config.json` `iurls`
-  and `infra/keria-config/witnesses/*` hardcode `http://witnesses:564x`;
-- the schema OOBI — set `PUBLIC_HOST` to the same reachable host.
+The **only** thing that must be reachable from the phone is the KERIA
+**connection URL `:3901`** and **boot URL `:3903`** the Veridian app's signify
+client connects to. So, for a real phone:
 
-Then: **Connect** tab → add the issuer OOBI as a connection in Veridian → paste
-your wallet's OOBI back → *Connect Veridian & continue*; Issue/Present/Attest
-prompt on the phone. Until that infra is in place, use demo mode.
+1. Run the stack; ensure ports `3901`/`3903` are reachable from the phone
+   (same LAN — use the host's LAN IP, or a tunnel). Leave `SCHEMA_OOBI_HOST`
+   and the vendored `keria-config` at their docker-internal defaults.
+2. In the Veridian app set the KERIA connection URL to `http://<LAN-IP>:3901`
+   and boot URL to `http://<LAN-IP>:3903`.
+3. **Connect** tab → add the issuer OOBI as a connection in Veridian → paste
+   your wallet's OOBI back → *Connect Veridian & continue*; Issue / Present /
+   Attest then prompt on the phone.
+
+The KERI message layer is verified by the headless **demo** e2e (3/3) on this
+same KERIA; demo mode needs no phone.
 
 ## Architecture
 

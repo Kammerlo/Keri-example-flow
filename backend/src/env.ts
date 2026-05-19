@@ -4,7 +4,14 @@ export interface Env {
   issuerName: string;
   issuerRegistry: string;
   issuerSalt: string | null;
-  publicHost: string;
+  /**
+   * Schema OOBI base **from KERIA's point of view**. The schema OOBI embedded
+   * in IPEX grant/apply is resolved server-side by the wallet's KERIA agent
+   * (which, when the wallet points at this stack, is the `keria` container) —
+   * NOT by the phone. So it must be reachable on KERIA's network, e.g. the
+   * docker service name `http://app:3001`, never a LAN IP / localhost.
+   */
+  schemaOobiHost: string;
   port: number;
 }
 
@@ -20,7 +27,7 @@ export function loadEnv(src: NodeJS.ProcessEnv = process.env): Env {
     issuerName: src.ISSUER_NAME || "keri-demo-issuer",
     issuerRegistry: src.ISSUER_REGISTRY || "keri-demo-registry",
     issuerSalt: src.ISSUER_SALT && src.ISSUER_SALT.length > 0 ? src.ISSUER_SALT : null,
-    publicHost: src.PUBLIC_HOST || "http://localhost:3001",
+    schemaOobiHost: src.SCHEMA_OOBI_HOST || "http://app:3001",
     port: Number(src.PORT || "3001"),
   };
 }

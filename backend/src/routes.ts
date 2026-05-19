@@ -36,7 +36,7 @@ export function makeRouter(
   jobs: JobRegistry
 ): Router {
   const r = Router();
-  const schemaOobi = `${env.publicHost}/oobi/${SCHEMA_SAID}`;
+  const schemaOobi = `${env.schemaOobiHost}/oobi/${SCHEMA_SAID}`;
 
   r.get("/oobi/:said", (req: Request, res: Response) => {
     if (req.params.said !== SCHEMA_SAID) {

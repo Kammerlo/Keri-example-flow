@@ -141,7 +141,9 @@ export default function Connect() {
                 {cfg?.keriaBootUrl ?? "http://localhost:3903"}
               </code>
               . On a phone, replace <code>localhost</code> with this machine's
-              LAN IP (and set <code>PUBLIC_HOST</code> accordingly).
+              LAN IP — that is the <em>only</em> URL that must be phone-reachable.
+              All OOBIs are resolved by KERIA itself, so leave the schema/issuer
+              hosts at their docker defaults.
             </p>
             <p>
               2. Add a connection in Veridian using this issuer's OOBI (scan or
