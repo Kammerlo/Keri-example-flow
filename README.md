@@ -40,29 +40,51 @@ the backend API (connect → issue → present → attest) and asserts the
 credential is admitted, the presentation verifies, and the attestation
 is anchored and verified against the holder's KEL.
 
-## Veridian (real wallet) mode
+## Veridian (real wallet) mode — code-correct, infra-dependent
 
-This follows the canonical `cip113` `KeriService.java` model: there is **no
-browser companion** — the backend resolves the wallet's OOBI and talks directly
-to the wallet AID, so issuance/presentation/attestation prompts appear **on the
-phone**.
+There is **no browser companion**: the backend resolves the wallet's OOBI and
+talks directly to the wallet AID, so prompts appear **on the phone**. The KERI
+communication is adopted from the Veridian team's own
+[`services/credential-server`](https://github.com/cardano-foundation/veridian-wallet/tree/main/services/credential-server):
 
-1. Set `PUBLIC_HOST` in `.env` to a URL the phone can reach on the LAN, e.g.
-   `http://192.168.1.50:3001`, and point the Veridian app's KERIA **connection
-   URL** at `…:3901` and **boot URL** at `…:3903` (LAN IP, not localhost).
-   Re-run `docker compose up -d`.
-2. **Connect** tab → Veridian card: add a connection in the Veridian app using
-   the displayed **issuer OOBI** (scan the QR or use Copy), then paste **your
-   Veridian identifier's OOBI** back into the field and press *Connect Veridian
-   & continue* (it forwards you to Issue).
-3. Issue / Present / Attest then prompt for approval inside the Veridian app.
+- issuance: plain `client.ipex().grant({ acdc, anc, iss, ancAttachment })`
+- presentation: plain `client.ipex().apply({ schemaSaid })`
+- OOBI resolve: strip `?name=`, resolve, then `contacts().update(...)`
+- attestation: `/remotesign/ixn/req` (needs `cf-idw-keria`,
+  `REMOTE_SIGNING=true`, already set)
 
-KERI communication (grant via `createExchangeMessage` with the schema OOBI in
-`exn.a`, `/ipex/apply` built the same way so the wallet doesn't drop it, and
-`/remotesign/ixn/req` for attestation) is adopted from `KeriService.java`.
-Attestation requires the `cf-idw-keria` image with `REMOTE_SIGNING=true`
-(already set in compose). Demo mode fully demonstrates every flow without a
-phone.
+This message layer is verified by the headless **demo** e2e (issue → present →
+attest, 3/3) against the same KERIA. Demo mode fully demonstrates every flow
+with no phone.
+
+### ⚠️ Known limitation: OOBI reachability for a real phone
+
+A KERI agent can only deliver an exn to an AID whose endpoint its KERIA can
+reach, and a wallet only accepts a grant from an issuer whose OOBI it could
+resolve. **Out of the box every OOBI/URL here uses docker-internal hostnames**
+(`GET /api/config` returns e.g. `issuerOobi=http://keria:3902/...`,
+`schemaOobi=http://app:3001/...`, `keriaUrl=http://localhost:3901`). A phone
+cannot resolve `keria`, `app`, or `localhost`, so the issuer connection never
+establishes and grants are silently dropped — which is why the phone shows
+nothing even though the message construction is correct.
+
+Making a real phone work is an operator networking task, not a code change. You
+must expose, at one address the phone can reach (your machine's LAN IP, or a
+reverse proxy/tunnel), **all** of:
+
+- KERIA agent `:3901` and boot `:3903` — and configure the Veridian app to use
+  them;
+- KERIA ext `:3902` **and override the advertised URL**: the vendored
+  `infra/keria-config/config.json` hardcodes `"keria": { "curls":
+  ["http://keria:3902/"] }` — change it to your reachable host so issuer OOBIs
+  are resolvable;
+- the demo witnesses `:5642–5647` — `infra/keria-config/config.json` `iurls`
+  and `infra/keria-config/witnesses/*` hardcode `http://witnesses:564x`;
+- the schema OOBI — set `PUBLIC_HOST` to the same reachable host.
+
+Then: **Connect** tab → add the issuer OOBI as a connection in Veridian → paste
+your wallet's OOBI back → *Connect Veridian & continue*; Issue/Present/Attest
+prompt on the phone. Until that infra is in place, use demo mode.
 
 ## Architecture
 
