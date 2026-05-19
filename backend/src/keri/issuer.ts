@@ -1,7 +1,6 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { type SignifyClient } from "signify-ts";
-import { witnessAids, TOAD } from "@keri-demo/shared";
 import type { Env } from "../env";
 import { bootClient, generateSalt } from "./client";
 import { withTimeout, waitOpts } from "./timeout";
@@ -44,12 +43,13 @@ export async function bootstrapIssuer(
   if (existing) {
     aid = existing.prefix;
   } else {
+    // No witnesses for the issuer — credential-server parity
+    // (`client.identifiers().create(aidName)`). A witnessed issuer makes KERIA
+    // reject the indexer end-role / loc-scheme reply ("unable to verify end
+    // role reply message"), which the Veridian wallet needs to locate the
+    // ACDC schema. The demo holder is still witnessed (the toad>0 lesson).
     const result = await withTimeout(
-      client.identifiers().create(env.issuerName, {
-        transferable: true,
-        toad: TOAD,
-        wits: witnessAids(),
-      }),
+      client.identifiers().create(env.issuerName, { transferable: true }),
       "identifier create"
     );
     await client.operations().wait(await result.op(), waitOpts());
@@ -63,6 +63,30 @@ export async function bootstrapIssuer(
       "addEndRole"
     );
     await client.operations().wait(await roleResult.op(), waitOpts());
+  }
+
+  // Indexer end-role + loc scheme (credential-server ensureEndRoles parity).
+  // The Veridian wallet discovers where to resolve the ACDC schema by querying
+  // the issuer's `indexer` endpoint on KERIA and reading this loc-scheme url —
+  // without it the wallet receives the credential but can't resolve its schema
+  // when opened. `url` must be reachable from KERIA (the wallet's KERIA), i.e.
+  // the schema-OOBI host, not a LAN IP. Idempotent: ignore "already exists".
+  try {
+    const idxRes = await client
+      .identifiers()
+      .addEndRole(env.issuerName, "indexer", aid);
+    await client.operations().wait(await idxRes.op(), waitOpts());
+  } catch (e) {
+    console.warn(`[issuer] indexer end-role skipped: ${(e as Error).message}`);
+  }
+  try {
+    const scheme = new URL(env.schemaOobiHost).protocol.replace(":", "");
+    const locRes = await client
+      .identifiers()
+      .addLocScheme(env.issuerName, { url: env.schemaOobiHost, scheme });
+    await client.operations().wait(await locRes.op(), waitOpts());
+  } catch (e) {
+    console.warn(`[issuer] loc scheme skipped: ${(e as Error).message}`);
   }
 
   // Registry.
