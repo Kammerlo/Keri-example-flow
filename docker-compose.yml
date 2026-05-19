@@ -1,0 +1,62 @@
+services:
+  witnesses:
+    container_name: kdemo-witnesses
+    image: weboftrust/keri:1.1.26
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=UTF-8
+    entrypoint: [kli]
+    command: [witness, demo]
+    volumes:
+      - ./infra/keria-config/witnesses:/keripy/scripts/keri/cf/main
+    ports:
+      - "5642:5642"
+      - "5643:5643"
+      - "5644:5644"
+      - "5645:5645"
+      - "5646:5646"
+      - "5647:5647"
+
+  keria:
+    container_name: kdemo-keria
+    # Upstream dev tag from cardano-foundation/veridian-wallet docker-compose.yaml.
+    # To bump: copy the keria image tag from that file and re-run
+    # infra/update-keria-config.sh. See README "Bump the KERIA image".
+    image: ghcr.io/cardano-foundation/cf-identity-wallet/cf-idw-keria:1.2.0-fix-VT20-2191-Un-ordered-exchange-queries-pagination-is-not-reliable-re-orders-a-a1cbe1f
+    environment:
+      - KERI_AGENT_CORS=true
+      - ALLOW_INTRODUCTIONS=true
+      - REMOTE_SIGNING=true
+    volumes:
+      - keria-data:/usr/local/var/keri
+      - ./infra/keria-config/config.json:/keria/scripts/keri/cf/backer-oobis.json
+    entrypoint: keria start --config-file backer-oobis --config-dir ./scripts --loglevel INFO
+    depends_on: [witnesses]
+    ports:
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
+
+  app:
+    container_name: kdemo-app
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - KERIA_URL=http://keria:3901
+      - KERIA_BOOT_URL=http://keria:3903
+      - ISSUER_NAME=keri-demo-issuer
+      - ISSUER_REGISTRY=keri-demo-registry
+      - PUBLIC_HOST=${PUBLIC_HOST:-http://localhost:3001}
+      - PORT=3001
+      - VITE_KERIA_URL=${VITE_KERIA_URL:-http://localhost:3901}
+      - VITE_KERIA_BOOT_URL=${VITE_KERIA_BOOT_URL:-http://localhost:3903}
+    volumes:
+      - app-data:/app/backend/data
+    depends_on: [keria]
+    ports:
+      - "3001:3001"
+
+volumes:
+  keria-data:
+  app-data:
