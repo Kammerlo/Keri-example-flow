@@ -7,12 +7,21 @@ export function Alert({
   children: React.ReactNode;
 }) {
   const tones = {
-    info: "bg-blue-50 text-blue-800 border-blue-200",
-    error: "bg-red-50 text-red-800 border-red-200",
-    success: "bg-green-50 text-green-800 border-green-200",
+    info: "border-ink/15 bg-white text-ink/80",
+    error: "border-red-300 bg-red-50 text-red-800",
+    success: "border-accent/40 bg-accent-soft text-ink",
   };
   return (
-    <div className={cn("rounded-md border p-3 text-sm", tones[tone])}>
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-lg border px-3.5 py-2.5 text-sm",
+        "before:absolute before:inset-y-0 before:left-0 before:w-1",
+        tone === "success" && "before:bg-accent",
+        tone === "error" && "before:bg-red-500",
+        tone === "info" && "before:bg-ink/30",
+        tones[tone]
+      )}
+    >
       {children}
     </div>
   );

@@ -1,3 +1,8 @@
+// ─── KERI layer: IPEX admit (holder side of issuance) ────────────────────────
+// IPEX is the consent protocol. The issuer `grant`s a credential; it is NOT in
+// the holder's wallet until the holder explicitly `admit`s it. Here the demo
+// holder waits for the `/exn/ipex/grant` notification, admits it, and submits
+// the admit back to the issuer (who is waiting for `/exn/ipex/admit`).
 import type { SignifyClient } from "signify-ts";
 import { waitForNotification, markAndDelete } from "./notifications";
 import { nowKeriTimestamp, waitOpts } from "./timeout";

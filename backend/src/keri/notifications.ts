@@ -1,3 +1,8 @@
+// ─── KERI layer: notifications ───────────────────────────────────────────────
+// IPEX is asynchronous: when a peer submits a grant/apply/offer/agree/admit
+// exchange, KERIA surfaces it to the recipient as a *notification* (route like
+// `/exn/ipex/grant`). There is no push — clients poll `notifications().list()`.
+// `markAndDelete` clears a handled notification so it isn't processed twice.
 import { type SignifyClient } from "signify-ts";
 
 export interface Notification {

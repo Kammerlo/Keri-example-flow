@@ -1,3 +1,11 @@
+// ─── KERI layer: demo holder ("demo KERI login") ─────────────────────────────
+// Creates a fresh, *witnessed* AID for the user entirely in the browser:
+//   1. boot/connect a KERIA agent from a browser-held salt
+//   2. create the identifier with `wits`+`toad` (witnesses co-sign key events,
+//      making the KEL tamper-evident — the toad>0 lesson)
+//   3. add the `agent` end-role so KERIA routes IPEX messages to this AID
+//   4. resolve the issuer + schema OOBIs so grants can be verified on admit
+// The resulting AID is what the backend issuer/verifier targets over IPEX.
 import type { SignifyClient } from "signify-ts";
 import type { ConfigDTO } from "@keri-demo/shared";
 import { bootClient, generateSalt } from "./client";

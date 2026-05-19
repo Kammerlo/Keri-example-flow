@@ -1,3 +1,8 @@
+// ─── KERI layer (browser): KERIA client ──────────────────────────────────────
+// The demo holder runs signify-ts *in the browser* and keeps its own salt in
+// localStorage — the keys never touch our backend. This is the core KERI
+// lesson: the holder, not the issuer, controls the identifier. boot() = one-
+// time agent provisioning; connect() = authenticated session.
 import { SignifyClient, ready, Tier, randomPasscode } from "signify-ts";
 
 function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {

@@ -1,3 +1,8 @@
+// ─── KERI layer: SAID ────────────────────────────────────────────────────────
+// Self-Addressing IDentifier: a Blake3 digest of the payload written back into
+// its own `d` field. The holder SAIDifies the attestation payload, anchors the
+// SAID in its KEL, and the backend re-derives/verifies it — content integrity
+// with no shared secret.
 import { Saider } from "signify-ts";
 
 export async function saidify(

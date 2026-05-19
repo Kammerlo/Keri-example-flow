@@ -4,7 +4,8 @@ export function Badge(props: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
       className={cn(
-        "inline-block rounded-full bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700",
+        "inline-block rounded-md border border-[var(--line)] bg-white px-2 py-0.5",
+        "font-mono text-[11px] tracking-tight text-ink/75",
         className
       )}
       {...rest}

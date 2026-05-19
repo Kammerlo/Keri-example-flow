@@ -1,3 +1,8 @@
+// ─── KERI layer: SAID ────────────────────────────────────────────────────────
+// A SAID (Self-Addressing IDentifier) is a Blake3 digest of a payload embedded
+// back into that payload's `d` field, so the content is its own tamper-evident
+// id. Attestation anchors a SAID into the holder's KEL; change one byte and the
+// SAID — and every downstream check — no longer matches.
 import { Saider } from "signify-ts";
 
 export async function saidify(
