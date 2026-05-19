@@ -4,6 +4,12 @@
 FROM node:22-bookworm-slim
 WORKDIR /app
 
+# git: signify-ts is pinned to a WebOfTrust git commit (npm 0.3.0 has an
+# auth-signature mismatch with the cf-idw-keria image). npm ci needs git to
+# fetch and build it.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+ && rm -rf /var/lib/apt/lists/*
+
 # Install workspace deps (dev deps included — tsx runs the backend).
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json shared/

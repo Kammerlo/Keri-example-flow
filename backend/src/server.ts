@@ -12,7 +12,8 @@ dotenv.config();
 const schemaPath = fileURLToPath(
   new URL("../../infra/schema/keri-demo-credential.schema.json", import.meta.url)
 );
-const SCHEMA_SAID: string = JSON.parse(readFileSync(schemaPath, "utf8")).$id;
+const schemaJson = JSON.parse(readFileSync(schemaPath, "utf8"));
+const SCHEMA_SAID: string = schemaJson.$id;
 
 async function bootstrapWithRetry(env: ReturnType<typeof loadEnv>) {
   const schemaOobi = `${env.publicHost}/oobi/${SCHEMA_SAID}`;
@@ -39,6 +40,20 @@ async function main(): Promise<void> {
   app.get("/readyz", (_req, res) => {
     if (ready) res.json({ ready: true });
     else res.status(503).json({ ready: false });
+  });
+
+  // The schema OOBI route MUST be live before bootstrap: bootstrap asks KERIA
+  // to resolve the schema OOBI, and KERIA fetches it from this very endpoint.
+  // Mounting it only after bootstrap would deadlock.
+  app.get("/healthz", (_req, res) => res.json({ ok: true }));
+  app.get("/oobi/:said", (req, res) => {
+    if (req.params.said !== SCHEMA_SAID) {
+      res.status(404).end();
+      return;
+    }
+    // keripy's OOBI loader only accepts application/json — NOT
+    // application/schema+json (KERIA logs "invalid content type").
+    res.type("application/json").send(JSON.stringify(schemaJson));
   });
 
   app.listen(env.port, () =>

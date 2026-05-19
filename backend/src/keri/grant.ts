@@ -138,13 +138,13 @@ export async function issueAndGrant(
     a: { i: holderAid, dt, name: attrs.name, email: attrs.email, role: attrs.role },
   });
   await client.operations().wait(issueResult.op, waitOpts());
-  const credentialSaid = issueResult.acdc.sad.d as string;
+  const credentialSaid = issueResult.acdc.ked.d as string;
   rec.add({
     title: "Credential minted",
     explanation:
       "The credential now exists with a SAID (self-addressing id). It is not yet " +
       "delivered — the holder must receive and admit it over IPEX.",
-    response: issueResult.acdc.sad,
+    response: issueResult.acdc.ked,
   });
 
   const ancAttachment = await getAncAttachment(client, credentialSaid);

@@ -39,7 +39,7 @@ export function makeRouter(
       res.status(404).end();
       return;
     }
-    res.type("application/schema+json").send(JSON.stringify(schemaJson));
+    res.type("application/json").send(JSON.stringify(schemaJson));
   });
 
   r.get("/healthz", (_req, res) => res.json({ ok: true }));

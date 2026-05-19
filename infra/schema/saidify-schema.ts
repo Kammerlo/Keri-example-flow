@@ -24,13 +24,16 @@ const schema: Record<string, unknown> = {
     a: {
       type: "object",
       properties: {
+        // `d` is the attribute-block SAID that KERIA/signify add on issuance —
+        // the canonical ACDC attribute shape requires it in the schema.
+        d: { type: "string" },
         i: { type: "string" },
         dt: { type: "string" },
         name: { type: "string" },
         email: { type: "string" },
         role: { type: "string" },
       },
-      required: ["i", "dt", "name", "email", "role"],
+      required: ["d", "i", "dt", "name", "email", "role"],
       additionalProperties: false,
     },
   },

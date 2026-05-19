@@ -15,6 +15,13 @@ describe("KeriDemoCredential schema", () => {
     expect(s.properties.a.properties).toHaveProperty("name");
     expect(s.properties.a.properties).toHaveProperty("email");
     expect(s.properties.a.properties).toHaveProperty("role");
-    expect(s.properties.a.required).toEqual(["i", "dt", "name", "email", "role"]);
+    expect(s.properties.a.required).toEqual([
+      "d",
+      "i",
+      "dt",
+      "name",
+      "email",
+      "role",
+    ]);
   });
 });

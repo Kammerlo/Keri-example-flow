@@ -47,7 +47,10 @@ services:
       - KERIA_BOOT_URL=http://keria:3903
       - ISSUER_NAME=keri-demo-issuer
       - ISSUER_REGISTRY=keri-demo-registry
-      - PUBLIC_HOST=${PUBLIC_HOST:-http://localhost:3001}
+      # KERIA resolves the schema OOBI from THIS url, so it must be reachable
+      # from the keria container — the docker service name, not localhost.
+      # For real-Veridian pairing set this to a LAN IP the phone can reach.
+      - PUBLIC_HOST=${PUBLIC_HOST:-http://app:3001}
       - PORT=3001
       - VITE_KERIA_URL=${VITE_KERIA_URL:-http://localhost:3901}
       - VITE_KERIA_BOOT_URL=${VITE_KERIA_BOOT_URL:-http://localhost:3903}

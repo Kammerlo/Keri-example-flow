@@ -13,7 +13,7 @@
     "@keri-demo/shared": "*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "signify-ts": "^0.3.0"
+    "signify-ts": "github:WebOfTrust/signify-ts#62a646f1eb67c30c8f1aecfe628d81dd693b60f2"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

@@ -15,8 +15,12 @@
     "dev:backend": "npm run build:shared && npm run dev -w backend",
     "dev:frontend": "npm run build:shared && npm run dev -w frontend"
   },
+  "overrides": {
+    "libsodium-wrappers-sumo": "0.7.15",
+    "libsodium-sumo": "0.7.15"
+  },
   "devDependencies": {
-    "signify-ts": "^0.3.0",
+    "signify-ts": "github:WebOfTrust/signify-ts#62a646f1eb67c30c8f1aecfe628d81dd693b60f2",
     "tsx": "^4.19.2",
     "typescript": "~5.6.3",
     "vitest": "^2.1.8"
