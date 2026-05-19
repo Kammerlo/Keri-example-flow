@@ -1,0 +1,23 @@
+{
+  "name": "keri-example-flow",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "build:shared": "npm run build -w shared",
+    "build:frontend": "npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build": "npm run build:shared && npm run build:frontend && npm run build:backend",
+    "schema:saidify": "tsx infra/schema/saidify-schema.ts",
+    "test": "npm run build:shared && npm run test -w shared && npm run test -w backend && npm run test -w frontend",
+    "dev:backend": "npm run build:shared && npm run dev -w backend",
+    "dev:frontend": "npm run build:shared && npm run dev -w frontend"
+  },
+  "devDependencies": {
+    "signify-ts": "^0.3.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
