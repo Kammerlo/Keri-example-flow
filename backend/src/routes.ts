@@ -36,7 +36,13 @@ export function makeRouter(
   jobs: JobRegistry
 ): Router {
   const r = Router();
+  // Full schema OOBI (with SAID) — used where KERIA resolves the schema
+  // directly (issuer bootstrap, demo holder via /api/config).
   const schemaOobi = `${env.schemaOobiHost}/oobi/${SCHEMA_SAID}`;
+  // BASE only (no SAID) — embedded as exn.a.oobiUrl. The Veridian wallet's
+  // getInlineSchemaOobiBase appends `/<schemaSaid>` itself; passing the full
+  // OOBI yields `.../oobi/<said>/<said>` -> 404 -> "operation not completing".
+  const schemaOobiBase = `${env.schemaOobiHost}/oobi`;
 
   r.get("/oobi/:said", (req: Request, res: Response) => {
     if (req.params.said !== SCHEMA_SAID) {
@@ -136,7 +142,7 @@ export function makeRouter(
           env.issuerName,
           body.holderAid,
           SCHEMA_SAID,
-          schemaOobi,
+          schemaOobiBase,
           { name: body.name, email: body.email, role: body.role },
           rec
         );
@@ -165,7 +171,7 @@ export function makeRouter(
           env.issuerName,
           body.holderAid,
           SCHEMA_SAID,
-          schemaOobi,
+          schemaOobiBase,
           rec
         );
         jobs.appendSteps(jobId, rec.steps());
