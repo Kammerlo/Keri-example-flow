@@ -15,6 +15,23 @@ export default function Connect() {
   const [err, setErr] = useState("");
   const [companionOobi, setCompanionOobi] = useState("");
   const [veridianOobi, setVeridianOobi] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function copyCompanionOobi() {
+    try {
+      await navigator.clipboard.writeText(companionOobi);
+    } catch {
+      // clipboard API unavailable (e.g. non-secure context) — fall back
+      const ta = document.createElement("textarea");
+      ta.value = companionOobi;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   useEffect(() => {
     if (!s.config) api.config().then((c) => s.set({ config: c })).catch(() => {});
@@ -149,9 +166,21 @@ export default function Connect() {
           {companionOobi && (
             <div className="mt-4 space-y-2">
               <p className="text-xs text-slate-500">
-                Scan this with the Veridian app:
+                Scan this with the Veridian app, or copy the OOBI:
               </p>
               <QRCodeSVG value={companionOobi} size={160} />
+              <div className="flex items-start gap-2">
+                <code className="block flex-1 break-all rounded bg-slate-100 p-2 font-mono text-[11px] text-slate-700">
+                  {companionOobi}
+                </code>
+                <Button
+                  className="shrink-0"
+                  type="button"
+                  onClick={copyCompanionOobi}
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </Button>
+              </div>
               <textarea
                 className="w-full rounded border p-2 text-xs"
                 placeholder="Paste the Veridian wallet OOBI here"
