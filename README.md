@@ -70,14 +70,19 @@ and a real Veridian wallet may use **different** KERIAs:
 - **`SCHEMA_RESOLVE_HOST`** (default `http://app:3001`) — reachable by *this*
   stack's KERIA; used for issuer bootstrap and the demo holder
   (`/api/config`). Keep the docker service name.
-- **`SCHEMA_OOBI_HOST`** (default `http://localhost:3001`) — reachable by the
-  *Veridian wallet's* KERIA; embedded as `exn.a.oobiUrl` (base, no SAID — the
-  wallet appends `/<schemaSaid>`) and the issuer loc-scheme. Set this to
-  whatever the wallet's KERIA can reach: `http://localhost:3001`,
-  `http://host.docker.internal:3001`, or `http://<LAN-IP>:3001`.
+- **`SCHEMA_OOBI_HOST`** (default `http://app:3001`) — embedded as
+  `exn.a.oobiUrl` (base, no SAID — the wallet appends `/<schemaSaid>`) and the
+  issuer loc-scheme. **This is resolved by the wallet's KERIA agent, not the
+  Veridian app.** In the standard setup the Veridian app connects to *this*
+  stack's KERIA (`localhost:3901`), so the resolver is the `keria` container
+  itself — the URL must be the docker service name `http://app:3001`, **not**
+  `localhost` (inside keria, `localhost` is keria, not the app). Only override
+  if the wallet uses a *different* KERIA on another network
+  (`http://host.docker.internal:3001` / `http://<LAN-IP>:3001`).
 
 Both paths the wallet uses (inline `oobiUrl` and the indexer/loc-scheme
-lookup) then resolve to `${SCHEMA_OOBI_HOST}/oobi/<schemaSaid>`.
+lookup) then resolve to `${SCHEMA_OOBI_HOST}/oobi/<schemaSaid>`, fetched by
+the wallet's KERIA.
 
 ### Networking model (what must be reachable from where)
 

@@ -11,10 +11,13 @@ export interface Env {
    */
   schemaResolveHost: string;
   /**
-   * Schema host reachable by the **Veridian wallet's KERIA** (which may be a
-   * different KERIA on localhost / another network). Embedded as the
-   * `exn.a.oobiUrl` base in grant/apply and the issuer loc-scheme. Set this to
-   * whatever the wallet's KERIA can reach (e.g. http://localhost:3001).
+   * Schema host embedded as the `exn.a.oobiUrl` base in grant/apply and the
+   * issuer loc-scheme. This is resolved by the **wallet's KERIA agent**, not
+   * the Veridian app process. In the standard setup the Veridian app connects
+   * to THIS stack's KERIA (via localhost:3901), so the resolver is the `keria`
+   * container itself — the URL must be docker-internal (`http://app:3001`),
+   * NOT localhost (which inside keria is keria, not the app). Only change this
+   * if the wallet uses a *different* KERIA on another network.
    */
   schemaOobiHost: string;
   port: number;
@@ -33,7 +36,7 @@ export function loadEnv(src: NodeJS.ProcessEnv = process.env): Env {
     issuerRegistry: src.ISSUER_REGISTRY || "keri-demo-registry",
     issuerSalt: src.ISSUER_SALT && src.ISSUER_SALT.length > 0 ? src.ISSUER_SALT : null,
     schemaResolveHost: src.SCHEMA_RESOLVE_HOST || "http://app:3001",
-    schemaOobiHost: src.SCHEMA_OOBI_HOST || "http://localhost:3001",
+    schemaOobiHost: src.SCHEMA_OOBI_HOST || "http://app:3001",
     port: Number(src.PORT || "3001"),
   };
 }

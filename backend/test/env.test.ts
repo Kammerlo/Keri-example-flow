@@ -11,7 +11,7 @@ describe("loadEnv", () => {
     expect(env.keriaUrl).toBe("http://keria:3901");
     expect(env.issuerName).toBe("keri-demo-issuer");
     expect(env.schemaResolveHost).toBe("http://app:3001");
-    expect(env.schemaOobiHost).toBe("http://localhost:3001");
+    expect(env.schemaOobiHost).toBe("http://app:3001");
     expect(env.port).toBe(3001);
   });
   it("throws when KERIA_URL is missing", () => {
